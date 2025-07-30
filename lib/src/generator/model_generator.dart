@@ -118,7 +118,7 @@ class ModelGenerator {
     // Properties
     for (final prop in properties) {
       final dartType = TypeMapper.mapODataTypeToDart(prop.type);
-      final nullable = prop.nullable ? '?' : '';
+      // final nullable = prop.nullable ? '?' : '';
       buffer.writeln(
           '  @JsonKey(name: \'${prop.name}\')'); // Map OData property name to Dart
       // buffer.writeln('  final $dartType$nullable ${prop.name.camelCase};');
