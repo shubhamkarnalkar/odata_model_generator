@@ -1,4 +1,3 @@
-import 'dart:convert';
 // You'll import your generated models here after running the generator
 // For example:
 // import 'package:example_app/src/models/generated/myservice/product.dart';
