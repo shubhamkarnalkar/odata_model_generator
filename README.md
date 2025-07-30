@@ -213,4 +213,4 @@ Developing and maintaining open-source packages like `odata_model_generator` req
 You can support this project via:
 
 * [**GitHub Sponsors**](https://github.com/shubhamkarnalkar/odata_model_generator?sponsor=1) - A great way to provide recurring support.
-* [**Ko-fi**](https://ko-fi.com/yourusername) - Buy me a coffee!
+* [**Ko-fi**](https://ko-fi.com/shubhamkarnalkar) - Buy me a coffee!
