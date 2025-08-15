@@ -16,20 +16,38 @@ class ModelGenerator {
     final schemaOutputDirectory = p.join(outputDirectory, schemaName);
     await Directory(schemaOutputDirectory).create(recursive: true);
 
+    final generatedFiles = <String>[];
+
     // create an enum class
     if (schema.enums.length > 0) {
-      _generateEnum(directory: schemaOutputDirectory, enums: schema.enums);
+      await _generateEnum(directory: schemaOutputDirectory, enums: schema.enums);
+      generatedFiles.add('enum.dart');
     }
 
     for (final entityType in schema.entityTypes) {
       await _generateClass(schemaOutputDirectory, entityType.name,
           entityType.properties, schema.enums);
+      generatedFiles.add('${ReCase(entityType.name).snakeCase}.dart');
     }
 
     for (final complexType in schema.complexTypes) {
       await _generateClass(schemaOutputDirectory, complexType.name,
           complexType.properties, schema.enums);
+      generatedFiles.add('${ReCase(complexType.name).snakeCase}.dart');
     }
+
+    // Generate <namespace>.dart exporting all generated files, with a library directive
+    final libraryBuffer = StringBuffer();
+    libraryBuffer.writeln('// GENERATED CODE - DO NOT MODIFY BY HAND');
+    libraryBuffer.writeln('// Exports all models for namespace: $schemaName');
+    libraryBuffer.writeln('library $schemaName;');
+    libraryBuffer.writeln();
+    for (final file in generatedFiles) {
+      libraryBuffer.writeln("export '$file';");
+    }
+    final libraryFilePath = p.join(schemaOutputDirectory, '$schemaName.dart');
+    await File(libraryFilePath).writeAsString(libraryBuffer.toString());
+    print('Generated library: $libraryFilePath');
   }
 
   Future<void> _generateEnum(
@@ -113,6 +131,21 @@ class ModelGenerator {
           : buffer.writeln('    this.${prop.name.camelCase},');
     }
     buffer.writeln('  });');
+    buffer.writeln();
+
+    // copyWith method
+    buffer.writeln('  ${rcClassName.pascalCase} copyWith({');
+    for (final prop in properties) {
+      final dartType = TypeMapper.mapODataTypeToDart(prop.type);
+      buffer.writeln('    $dartType? ${prop.name.camelCase},');
+    }
+    buffer.writeln('  }) {');
+    buffer.writeln('    return ${rcClassName.pascalCase}(');
+    for (final prop in properties) {
+      buffer.writeln('      ${prop.name.camelCase}: ${prop.name.camelCase} ?? this.${prop.name.camelCase},');
+    }
+    buffer.writeln('    );');
+    buffer.writeln('  }');
     buffer.writeln();
 
     // Properties
