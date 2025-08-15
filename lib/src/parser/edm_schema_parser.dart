@@ -21,7 +21,15 @@ class EdmSchemaParser {
           in entityTypeElement.findAllElements('Property')) {
         properties.add(_parseProperty(propertyElement));
       }
-      entityTypes.add(EdmEntityType(name: name, properties: properties));
+      final navigationProperties = <EdmProperty>[];
+      for (final navPropElement
+          in entityTypeElement.findAllElements('NavigationProperty')) {
+        navigationProperties.add(_parseNavigationProperty(navPropElement));
+      }
+      entityTypes.add(EdmEntityType(
+          name: name,
+          properties: properties,
+          navigationProperties: navigationProperties));
     }
 
     final complexTypes = <EdmComplexType>[];
@@ -33,7 +41,15 @@ class EdmSchemaParser {
           in complexTypeElement.findAllElements('Property')) {
         properties.add(_parseProperty(propertyElement));
       }
-      complexTypes.add(EdmComplexType(name: name, properties: properties));
+      final navigationProperties = <EdmProperty>[];
+      for (final navPropElement
+          in complexTypeElement.findAllElements('NavigationProperty')) {
+        navigationProperties.add(_parseNavigationProperty(navPropElement));
+      }
+      complexTypes.add(EdmComplexType(
+          name: name,
+          properties: properties,
+          navigationProperties: navigationProperties));
     }
 
     final enums = <EdmEnum>[];
@@ -67,6 +83,19 @@ class EdmSchemaParser {
       type: type,
       nullable: nullable,
       maxLength: maxLength != null ? int.tryParse(maxLength) : null,
+      isNavigation: false,
+    );
+  }
+
+  EdmProperty _parseNavigationProperty(XmlElement navPropElement) {
+    final name = navPropElement.getAttribute('Name')!;
+    final type = navPropElement.getAttribute('Type')!;
+    // Navigation properties are always references to other entities
+    return EdmProperty(
+      name: name,
+      type: type,
+      isNavigation: true,
+      navigationType: type,
     );
   }
 }

@@ -3,6 +3,8 @@ class EdmProperty {
   final String type; // Edm.String, Edm.Int32, Namespace.ComplexType etc.
   final bool nullable;
   final int? maxLength;
+  final bool isNavigation;
+  final String? navigationType; // Target entity type for navigation properties
   // Add other OData property attributes as needed
 
   EdmProperty({
@@ -10,5 +12,7 @@ class EdmProperty {
     required this.type,
     this.nullable = true,
     this.maxLength,
+    this.isNavigation = false,
+    this.navigationType,
   });
 }

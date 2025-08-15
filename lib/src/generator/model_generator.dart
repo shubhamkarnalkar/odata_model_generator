@@ -20,19 +20,30 @@ class ModelGenerator {
 
     // create an enum class
     if (schema.enums.length > 0) {
-      await _generateEnum(directory: schemaOutputDirectory, enums: schema.enums);
+      await _generateEnum(
+          directory: schemaOutputDirectory, enums: schema.enums);
       generatedFiles.add('enum.dart');
     }
 
     for (final entityType in schema.entityTypes) {
-      await _generateClass(schemaOutputDirectory, entityType.name,
-          entityType.properties, schema.enums);
+      await _generateClass(
+        schemaOutputDirectory,
+        entityType.name,
+        entityType.properties,
+        schema.enums,
+        entityType.navigationProperties,
+      );
       generatedFiles.add('${ReCase(entityType.name).snakeCase}.dart');
     }
 
     for (final complexType in schema.complexTypes) {
-      await _generateClass(schemaOutputDirectory, complexType.name,
-          complexType.properties, schema.enums);
+      await _generateClass(
+        schemaOutputDirectory,
+        complexType.name,
+        complexType.properties,
+        schema.enums,
+        complexType.navigationProperties ?? const [],
+      );
       generatedFiles.add('${ReCase(complexType.name).snakeCase}.dart');
     }
 
@@ -81,8 +92,13 @@ class ModelGenerator {
     print('Generated enum classes in : $filePath');
   }
 
-  Future<void> _generateClass(String directory, String className,
-      List<EdmProperty> properties, List<EdmEnum> enums) async {
+  Future<void> _generateClass(
+    String directory,
+    String className,
+    List<EdmProperty> properties,
+    List<EdmEnum> enums,
+    List<EdmProperty> navigationProperties,
+  ) async {
     final ReCase rcClassName = ReCase(className);
     final fileName = '${rcClassName.snakeCase}.dart';
     final filePath = p.join(directory, fileName);
@@ -93,25 +109,38 @@ class ModelGenerator {
     buffer.writeln("import 'package:json_annotation/json_annotation.dart';");
     // imports for different entity models which are related
 
-    for (final prop in properties.where(
-      (element) => !element.type.contains('Edm'),
-    )) {
+    // Regular properties imports
+    for (final prop
+        in properties.where((element) => !element.type.contains('Edm'))) {
       final dartType2 = TypeMapper.mapODataTypeToDart(prop.type);
       final imp = "import '${dartType2.snakeCase}.dart';";
       if (!buffer.toString().contains(imp) &&
           !prop.type.contains('Edm') &&
           dartType2 != 'String' &&
-          !enums.any(
-            (element) => element.type.contains(dartType2),
-          )) {
+          !enums.any((element) => element.type.contains(dartType2))) {
         buffer.writeln(imp);
       } else {
         !buffer.toString().contains(enumDart) &&
-                enums.any(
-                  (element) => element.type.contains(dartType2),
-                )
+                enums.any((element) => element.type.contains(dartType2))
             ? buffer.writeln(enumDart)
             : null;
+      }
+    }
+
+    // Navigation properties imports
+    for (final navProp in navigationProperties) {
+      final navType = navProp.navigationType ?? navProp.type;
+      if (!navType.contains('Edm')) {
+        String typeName = navType;
+        if (navType.startsWith('Collection(') && navType.endsWith(')')) {
+          typeName = navType.substring(11, navType.length - 1);
+        }
+        final navTypeClass = typeName.split('.').last;
+        final navFile = '${ReCase(navTypeClass).snakeCase}.dart';
+        final imp = "import '$navFile';";
+        if (!buffer.toString().contains(imp)) {
+          buffer.writeln(imp);
+        }
       }
     }
 
@@ -125,10 +154,12 @@ class ModelGenerator {
     // Constructor
     buffer.writeln('  ${rcClassName.pascalCase}({');
     for (final prop in properties) {
-      // final dartType = TypeMapper.mapODataTypeToDart(prop.type);
       prop.nullable
           ? buffer.writeln('    this.${prop.name.camelCase}?,')
           : buffer.writeln('    this.${prop.name.camelCase},');
+    }
+    for (final navProp in navigationProperties) {
+      buffer.writeln('    this.${navProp.name.camelCase},');
     }
     buffer.writeln('  });');
     buffer.writeln();
@@ -139,10 +170,27 @@ class ModelGenerator {
       final dartType = TypeMapper.mapODataTypeToDart(prop.type);
       buffer.writeln('    $dartType? ${prop.name.camelCase},');
     }
+    for (final navProp in navigationProperties) {
+      final navType = navProp.navigationType ?? navProp.type;
+      String typeName = navType;
+      bool isCollection = false;
+      if (navType.startsWith('Collection(') && navType.endsWith(')')) {
+        typeName = navType.substring(11, navType.length - 1);
+        isCollection = true;
+      }
+      final navTypeClass = ReCase(typeName.split('.').last).pascalCase;
+      final dartType = isCollection ? 'List<$navTypeClass>' : navTypeClass;
+      buffer.writeln('    $dartType? ${navProp.name.camelCase},');
+    }
     buffer.writeln('  }) {');
     buffer.writeln('    return ${rcClassName.pascalCase}(');
     for (final prop in properties) {
-      buffer.writeln('      ${prop.name.camelCase}: ${prop.name.camelCase} ?? this.${prop.name.camelCase},');
+      buffer.writeln(
+          '      ${prop.name.camelCase}: ${prop.name.camelCase} ?? this.${prop.name.camelCase},');
+    }
+    for (final navProp in navigationProperties) {
+      buffer.writeln(
+          '      ${navProp.name.camelCase}: ${navProp.name.camelCase} ?? this.${navProp.name.camelCase},');
     }
     buffer.writeln('    );');
     buffer.writeln('  }');
@@ -151,16 +199,27 @@ class ModelGenerator {
     // Properties
     for (final prop in properties) {
       final dartType = TypeMapper.mapODataTypeToDart(prop.type);
-      // final nullable = prop.nullable ? '?' : '';
-      buffer.writeln(
-          '  @JsonKey(name: \'${prop.name}\')'); // Map OData property name to Dart
-      // buffer.writeln('  final $dartType$nullable ${prop.name.camelCase};');
+      buffer.writeln('  @JsonKey(name: "${prop.name}")');
       if (prop.type.contains('Collection') && !dartType.contains('List')) {
         buffer.writeln('  final $dartType? ${prop.name.camelCase};');
       } else {
         buffer.writeln('  final $dartType? ${prop.name.camelCase};');
       }
-
+      buffer.writeln();
+    }
+    // Navigation Properties
+    for (final navProp in navigationProperties) {
+      final navType = navProp.navigationType ?? navProp.type;
+      String typeName = navType;
+      bool isCollection = false;
+      if (navType.startsWith('Collection(') && navType.endsWith(')')) {
+        typeName = navType.substring(11, navType.length - 1);
+        isCollection = true;
+      }
+      final navTypeClass = ReCase(typeName.split('.').last).pascalCase;
+      final dartType = isCollection ? 'List<$navTypeClass>' : navTypeClass;
+      buffer.writeln('  // Navigation property');
+      buffer.writeln('  final $dartType? ${navProp.name.camelCase};');
       buffer.writeln();
     }
 
