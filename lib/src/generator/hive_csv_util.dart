@@ -8,7 +8,9 @@ Future<void> generateHiveCsv(String inputDirectory, String outputDirectory,
     {String? csvPath}) async {
   final outDir = Directory(outputDirectory);
   final inDir = Directory(inputDirectory);
-  if (!await inDir.exists()) return;
+  if (!await inDir.exists()) {
+    throw Exception('Input directory "$inputDirectory" does not exist.');
+  }
 
   final csvBuffer = StringBuffer();
   csvBuffer.writeln('className,typeId');

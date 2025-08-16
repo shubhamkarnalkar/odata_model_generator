@@ -15,14 +15,20 @@ class ModelGenerator {
   /// Output directory for generated Dart files.
   final String outputDirectory;
 
+  /// Output directory for generated Dart files.
+  final String inputDirectory;
+
   /// If true, enables Hive annotation logic (requires `hive.csv`).
   final bool useHive;
+
+  final List<String> hiveAdapterClasses = [];
 
   /// Creates a [ModelGenerator].
   ///
   /// [outputDirectory]: Where generated Dart files will be written.
   /// [useHive]: If true, enables Hive annotation logic (requires `hive.csv`).
-  ModelGenerator(this.outputDirectory, {this.useHive = false});
+  ModelGenerator(this.outputDirectory, this.inputDirectory,
+      {this.useHive = false});
 
   /// Generates Dart model classes and enums for the given [schema].
   ///
@@ -39,15 +45,12 @@ class ModelGenerator {
     // --- Read hive.csv once and build a map ---
     Map<String, String> hiveTypeIdMap = {};
     if (useHive) {
-      final inputDir = Directory(p.dirname(p.dirname(outputDirectory)));
-      final csvFile = File(p.join(inputDir.path, 'hive.csv'));
+      final csvFile = File(p.join(inputDirectory, 'hive.csv'));
       if (await csvFile.exists()) {
         final lines = await csvFile.readAsLines();
         for (final line in lines.skip(1)) {
           final parts = line.split(',');
-          if (parts.length >= 2 &&
-              parts[0].trim().isNotEmpty &&
-              parts[1].trim().isNotEmpty) {
+          if (parts.length >= 2 && parts[0].trim().isNotEmpty) {
             hiveTypeIdMap[parts[0].trim()] = parts[1].trim();
           }
         }
@@ -236,7 +239,14 @@ class ModelGenerator {
       buffer.writeln('@HiveType(typeId: $hiveTypeId)');
     }
     buffer.writeln('@JsonSerializable()');
-    buffer.writeln('class ${rcClassName.pascalCase} {');
+    if (hiveTypeId != null) {
+      buffer.writeln('class ${rcClassName.pascalCase} extends HiveObject {');
+
+      hiveAdapterClasses.add(
+          'Hive.registerAdapter(${rcClassName.pascalCase.toString()}Adapter());');
+    } else {
+      buffer.writeln('class ${rcClassName.pascalCase} {');
+    }
 
     // Constructor
     buffer.writeln('  ${rcClassName.pascalCase}({');

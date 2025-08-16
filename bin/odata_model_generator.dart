@@ -63,7 +63,8 @@ void main(List<String> arguments) async {
       outputDir.createSync(recursive: true);
     }
     // Check if hive.csv is present in the output directory, create if not
-    final hiveCsvFile = File('$outputPath/hive.csv');
+
+    final hiveCsvFile = File('$inputPath/hive.csv');
     bool useHive = false;
     useHive = hiveCsvFile.existsSync();
     final generator = ODataModelGenerator(

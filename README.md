@@ -1,93 +1,107 @@
-# odata\_model\_generator
+
+<div align="center">
+
+# 🚀 odata_model_generator
+
+
+<a href="https://pub.dev/packages/odata_model_generator"><img src="https://img.shields.io/pub/v/odata_model_generator.svg?style=flat-square" alt="Pub Version"></a>
+<a href="https://github.com/shubhamkarnalkar/odata_model_generator"><img src="https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white&style=flat-square" alt="GitHub"></a>
+<a href="https://ko-fi.com/shubhamkarnalkar"><img src="https://img.shields.io/badge/Ko--fi-F16061?logo=kofi&logoColor=white&style=flat-square" alt="Ko-fi"></a>
+
+</div>
 
 [](https://www.google.com/search?q=https://pub.dev/packages/odata_model_generator)
 [](https://www.google.com/search?q=LICENSE)
 [](https://www.google.com/search?q=https://github.com/shubhamkarnalkar/odata_model_generator/actions)
 
-A Dart package and command-line tool to generate strongly-typed Dart models from OData CSDL (Conceptual Schema Definition Language) XML metadata files. This tool automates the creation of Dart classes for your OData Entity Types, Enum, and Complex Types, integrated with `json_annotation` for seamless JSON serialization and deserialization, and supports Hive for local storage.
+
+> **A modern Dart code generator for OData CSDL XML metadata.**
+> 
+> - 🏗️ Generates Dart classes for OData Entity Types, Enums, and Complex Types
+> - 🐝 Optional Hive support for local storage
+> - 🔄 JSON serialization with `json_annotation`
+> - 🛠️ CLI for easy automation
 
 ## ✨ Features
 
-  * **Model Generation:** Automatically creates Dart classes for OData Entity Types and Complex Types.
-  * **Hive Support:** Optionally generates Hive-compatible model classes and a `hive.csv` for local storage integration.
-  * **`json_annotation` Integration:** Generated models are annotated with `@JsonSerializable()`, enabling easy `fromJson` and `toJson` methods via `build_runner`.
-  * **Type Mapping:** Maps common OData EDM types (e.g., `Edm.String`, `Edm.Int32`, `Edm.Boolean`, `Edm.DateTimeOffset`) to appropriate Dart types (`String`, `int`, `bool`, `DateTime`).
-  * **Command-Line Interface (CLI):** Easy to use from your terminal to generate models from a specified metadata folder.
-  * **Multiple Metadata Files:** Supports processing multiple OData metadata XML files from a single input directory.
+✔️ **Model Generation:** Dart classes for OData Entity Types, Complex Types, and Enums  
+✔️ **Hive Support:** Optionally generate Hive-compatible models and a `hive.csv` for local storage  
+✔️ **JSON Serialization:** Models use `@JsonSerializable()` for easy `fromJson`/`toJson`  
+✔️ **Type Mapping:** Maps OData EDM types to Dart types  
+✔️ **CLI:** Simple terminal commands for automation  
+✔️ **Multi-file Support:** Handles multiple OData metadata XML files in one go
 
+## 🛠️ Usage
 
-## 🚀 Getting Started
-
-### Generating hive.csv or Dart Models from OData Metadata
-
-The CLI now supports two mutually exclusive modes:
+The CLI supports two mutually exclusive modes:
 
 - `-c` or `--csv`: Generate a `hive.csv` file listing all generated classes and their typeId values (no model generation).
 - `-g` or `--generate`: Generate Dart model classes from OData metadata (no CSV generation).
 
-#### Example: Generate only the CSV
+**You must specify exactly one of `-c` or `-g`.**
 
-```bash
-dart run odata_model_generator -c --input odata_metadata --output lib/models/odata
-```
+### Directory Options
 
-This will create the `hive.csv` file in your input directory.
+- `--input` (or `-i`): Path to the folder containing OData metadata XML files.  
+  **Default:** `odata_metadata`
+- `--output` (or `-o`): Path to the directory where generated Dart models will be saved.  
+  **Default:** `lib/src/models/generated`
 
+### Hive Support
 
-#### Example: Generate only Dart models
-
-```bash
-dart run odata_model_generator -g --input odata_metadata --output lib/models/odata
-```
-
-You must specify exactly one of `-c` or `-g`.
-
-
-#### ⚠️ Hive annotation logic
-
+- When generating models with Hive support, the generator checks for `hive.csv` in the input directory.
 - Hive annotations are only added if the class is present in `hive.csv`.
-- If a class is present in `hive.csv` but the `typeId` is missing, the generator will:
-  - Print a warning in the console.
-  - Assign the next available `typeId` by scanning all `@HiveType(typeId: ...)` annotations in your `lib/models` folder.
+- If a class is present in `hive.csv` but missing a typeId, the generator assigns the next available typeId and prints a warning.
+
+### Example Commands
+
+Generate only the CSV:
+```bash
+dart run odata_model_generator -c --input odata_metadata --output lib/src/models/generated
+```
+
+Generate only Dart models:
+```bash
+dart run odata_model_generator -g --input odata_metadata --output lib/src/models/generated
+```
+
+### After Model Generation
+
+After generating models, run:
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+to generate the necessary `.g.dart` files for JSON serialization.
+
+If Hive adapters are generated, the tool will print a reminder to register them in your project.
+
+> ⚡️ **IMPORTANT:**
+> 
+> If you use Hive, **always generate the `hive.csv` file first** with `-c` before generating Hive-annotated Dart classes with `-g`. This keeps all Hive typeIds and class mappings up to date. If you skip this, Hive annotations and typeIds may be missing or incorrect in your generated models.
   - Ensure every generated class gets a unique `typeId` and you are notified of the assignment.
 - If a class is not present in `hive.csv`, no Hive annotation or import will be added for that class.
 
-### 1. Installation
+### 1\.  📦 Installation
 
-Add `odata_model_generator` to your `pubspec.yaml` under `dev_dependencies` if you're using it as a command-line tool within your project, or under `dependencies` if you plan to import and use its API programmatically.
+Add `odata_model_generator` as a dev dependency using your preferred CLI:
 
-For most use cases, you'll want it as a `dev_dependency` in the project where you need the models generated:
-
-```yaml
-# my_flutter_app/pubspec.yaml or my_dart_app/pubspec.yaml
-dev_dependencies:
-
-You must specify exactly one of `-c` or `-g`.
-
-### 1. Installation
-
-Add `odata_model_generator` to your `pubspec.yaml` under `dev_dependencies` if you're using it as a command-line tool within your project, or under `dependencies` if you plan to import and use its API programmatically.
-
-For most use cases, you'll want it as a `dev_dependency` in the project where you need the models generated:
-
-```yaml
-# my_flutter_app/pubspec.yaml or my_dart_app/pubspec.yaml
-dev_dependencies:
-  odata_model_generator: ^0.1.0 # Use the latest version from pub.dev
-  json_annotation: ^4.8.1       # Required by generated models
-
-# These are also necessary for json_annotation to work with build_runner
-dependencies:
-  build_runner: ^2.4.6          # Only if you need to run build_runner in this project
-  json_serializable: ^6.7.1     # Only if you need to run build_runner in this project
-```
-
-After updating `pubspec.yaml`, run:
-
+For Flutter projects:
 ```bash
-flutter pub get # For Flutter projects
-dart pub get    # For pure Dart projects
+flutter pub add --dev odata_model_generator
 ```
+
+For pure Dart projects:
+```bash
+dart pub add --dev odata_model_generator
+```
+
+Or manually add to your `pubspec.yaml` under `dev_dependencies`:
+```yaml
+dev_dependencies:
+  odata_model_generator: ^latest_version # Check pub.dev for the latest version
+```
+
+Then run `flutter pub get` or `dart pub get` as appropriate.
 
 ### 2\. Prepare Your OData Metadata Files
 Download and store in your project with extension .xml
@@ -137,9 +151,6 @@ dart run odata_model_generator --input odata_metadata --output lib/src/models/od
 ```
 
 **Command Options:**
-  * `-h`, `--hive`: Enable Hive support and CSV generation. Use `y` or `true` to activate.
-  * `--hive-csv`: (Optional) Path to the CSV file to write class/typeId info. Defaults to `hive.csv` in the output directory.
-
   * `-i`, `--input`: Path to the folder containing your OData metadata XML files.
       * **Default:** `odata_metadata`
   * `-o`, `--output`: Path to the directory where the generated Dart models will be saved.
@@ -263,4 +274,12 @@ Developing and maintaining open-source packages like `odata_model_generator` req
 You can support this project via:
 
 * [**GitHub Sponsors**](https://github.com/shubhamkarnalkar/odata_model_generator?sponsor=1) - A great way to provide recurring support.
-* [**Ko-fi**](https://ko-fi.com/shubhamkarnalkar) - Buy me a coffee!
+
+
+<div align="center">
+  <a href="https://ko-fi.com/shubhamkarnalkar" target="_blank">
+    <img src="https://cdn.ko-fi.com/cdn/kofi3.png?v=3" height="36" alt="Buy Me a Coffee at ko-fi.com"/>
+  </a>
+  <br/>
+  <b>Thank you for your support!</b>
+</div>

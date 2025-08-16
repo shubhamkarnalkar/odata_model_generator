@@ -31,7 +31,8 @@ class ODataModelGenerator {
     }
 
     final parser = EdmSchemaParser();
-    final generator = ModelGenerator(outputFolderPath, useHive: hive);
+    final generator =
+        ModelGenerator(outputFolderPath, metadataFolderPath, useHive: hive);
 
     for (final file in metadataFiles) {
       print('Processing metadata file: ${file.path}');
@@ -46,5 +47,12 @@ class ODataModelGenerator {
 
     print(
         '\nModel generation complete. Run `dart run build_runner build` in your project to generate .g.dart files.');
+
+    if (generator.hiveAdapterClasses.isNotEmpty) {
+      print('\nIMPORTANT!! Don\'t forget to register Hive adapters:');
+      for (final className in generator.hiveAdapterClasses) {
+        print('$className');
+      }
+    }
   }
 }
