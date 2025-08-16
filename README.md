@@ -42,13 +42,15 @@ dart run odata_model_generator -g --input odata_metadata --output lib/models/oda
 
 You must specify exactly one of `-c` or `-g`.
 
-#### ⚠️ Automatic typeId assignment for Hive
 
-If a class is missing a `typeId` in `hive.csv`, the generator will:
+#### ⚠️ Hive annotation logic
 
-- Print a warning in the console.
-- Assign the next available `typeId` by scanning all `@HiveType(typeId: ...)` annotations in your `lib/models` folder.
-- Ensure every generated class gets a unique `typeId` and you are notified of the assignment.
+- Hive annotations are only added if the class is present in `hive.csv`.
+- If a class is present in `hive.csv` but the `typeId` is missing, the generator will:
+  - Print a warning in the console.
+  - Assign the next available `typeId` by scanning all `@HiveType(typeId: ...)` annotations in your `lib/models` folder.
+  - Ensure every generated class gets a unique `typeId` and you are notified of the assignment.
+- If a class is not present in `hive.csv`, no Hive annotation or import will be added for that class.
 
 ### 1. Installation
 
