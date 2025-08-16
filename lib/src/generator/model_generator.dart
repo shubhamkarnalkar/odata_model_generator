@@ -8,8 +8,9 @@ import 'dart:io';
 
 class ModelGenerator {
   final String outputDirectory;
+  final bool useHive;
 
-  ModelGenerator(this.outputDirectory);
+  ModelGenerator(this.outputDirectory, {this.useHive = false});
 
   Future<void> generate(EdmSchema schema) async {
     final schemaName = schema.namespace.split('.').last.snakeCase;
@@ -17,6 +18,24 @@ class ModelGenerator {
     await Directory(schemaOutputDirectory).create(recursive: true);
 
     final generatedFiles = <String>[];
+
+    // --- Read hive.csv once and build a map ---
+    Map<String, String> hiveTypeIdMap = {};
+    if (useHive) {
+      final inputDir = Directory(p.dirname(p.dirname(outputDirectory)));
+      final csvFile = File(p.join(inputDir.path, 'hive.csv'));
+      if (await csvFile.exists()) {
+        final lines = await csvFile.readAsLines();
+        for (final line in lines.skip(1)) {
+          final parts = line.split(',');
+          if (parts.length >= 2 &&
+              parts[0].trim().isNotEmpty &&
+              parts[1].trim().isNotEmpty) {
+            hiveTypeIdMap[parts[0].trim()] = parts[1].trim();
+          }
+        }
+      }
+    }
 
     // create an enum class
     if (schema.enums.length > 0) {
@@ -32,6 +51,7 @@ class ModelGenerator {
         entityType.properties,
         schema.enums,
         entityType.navigationProperties,
+        hiveTypeId: hiveTypeIdMap[entityType.name],
       );
       generatedFiles.add('${ReCase(entityType.name).snakeCase}.dart');
     }
@@ -42,7 +62,8 @@ class ModelGenerator {
         complexType.name,
         complexType.properties,
         schema.enums,
-        complexType.navigationProperties ?? const [],
+        complexType.navigationProperties,
+        hiveTypeId: hiveTypeIdMap[complexType.name],
       );
       generatedFiles.add('${ReCase(complexType.name).snakeCase}.dart');
     }
@@ -93,12 +114,12 @@ class ModelGenerator {
   }
 
   Future<void> _generateClass(
-    String directory,
-    String className,
-    List<EdmProperty> properties,
-    List<EdmEnum> enums,
-    List<EdmProperty> navigationProperties,
-  ) async {
+      String directory,
+      String className,
+      List<EdmProperty> properties,
+      List<EdmEnum> enums,
+      List<EdmProperty> navigationProperties,
+      {String? hiveTypeId}) async {
     final ReCase rcClassName = ReCase(className);
     final fileName = '${rcClassName.snakeCase}.dart';
     final filePath = p.join(directory, fileName);
@@ -107,6 +128,9 @@ class ModelGenerator {
     final buffer = StringBuffer();
     buffer.writeln('// GENERATED CODE - DO NOT MODIFY BY HAND');
     buffer.writeln("import 'package:json_annotation/json_annotation.dart';");
+    if (hiveTypeId != null) {
+      buffer.writeln("import 'package:hive/hive.dart';");
+    }
     // imports for different entity models which are related
 
     // Regular properties imports
@@ -148,6 +172,9 @@ class ModelGenerator {
         "part '${rcClassName.snakeCase}.g.dart';"); // For json_serializable
     buffer.writeln();
 
+    if (hiveTypeId != null) {
+      buffer.writeln('@HiveType(typeId: $hiveTypeId)');
+    }
     buffer.writeln('@JsonSerializable()');
     buffer.writeln('class ${rcClassName.pascalCase} {');
 
