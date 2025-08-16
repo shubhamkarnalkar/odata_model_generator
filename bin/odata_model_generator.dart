@@ -41,6 +41,11 @@ void main(List<String> arguments) async {
   print('Input metadata folder: $inputPath');
   print('Output models folder: $outputPath');
   if (summaryCsv) {
+    final inputDir = Directory(inputPath);
+    if (!inputDir.existsSync()) {
+      stderr.writeln('ERROR !! Input directory "$inputPath" does not exist.');
+      exit(1);
+    }
     try {
       await generateHiveCsv(inputPath, outputPath);
       print('Summary CSV (hive.csv) generated in $inputPath');
@@ -52,9 +57,19 @@ void main(List<String> arguments) async {
   }
 
   if (generateClasses) {
+    // Ensure output directory exists
+    final outputDir = Directory(outputPath);
+    if (!outputDir.existsSync()) {
+      outputDir.createSync(recursive: true);
+    }
+    // Check if hive.csv is present in the output directory, create if not
+    final hiveCsvFile = File('$outputPath/hive.csv');
+    bool useHive = false;
+    useHive = hiveCsvFile.existsSync();
     final generator = ODataModelGenerator(
       metadataFolderPath: inputPath,
       outputFolderPath: outputPath,
+      hive: useHive,
     );
     try {
       await generator.generateModels();

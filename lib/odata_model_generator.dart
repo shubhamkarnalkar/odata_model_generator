@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'src/parser/edm_schema_parser.dart';
 import 'src/generator/model_generator.dart';
-import 'src/generator/hive_csv_util.dart';
 
 class ODataModelGenerator {
   final String metadataFolderPath;
