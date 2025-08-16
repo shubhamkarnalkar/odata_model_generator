@@ -1,4 +1,9 @@
+/// Maps OData EDM types to Dart types for model generation.
+///
+/// Handles primitive types, collections, and custom types.
 class TypeMapper {
+  /// Maps an OData type string (e.g., 'Edm.String', 'Collection(Edm.Int32)')
+  /// to the corresponding Dart type (e.g., 'String', 'int').
   static String mapODataTypeToDart(String odataType) {
     switch (odataType) {
       case 'Edm.String':

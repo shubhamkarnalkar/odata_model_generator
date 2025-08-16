@@ -33,6 +33,7 @@ dart run odata_model_generator -c --input odata_metadata --output lib/models/oda
 
 This will create the `hive.csv` file in your input directory.
 
+
 #### Example: Generate only Dart models
 
 ```bash
@@ -40,6 +41,14 @@ dart run odata_model_generator -g --input odata_metadata --output lib/models/oda
 ```
 
 You must specify exactly one of `-c` or `-g`.
+
+#### ⚠️ Automatic typeId assignment for Hive
+
+If a class is missing a `typeId` in `hive.csv`, the generator will:
+
+- Print a warning in the console.
+- Assign the next available `typeId` by scanning all `@HiveType(typeId: ...)` annotations in your `lib/models` folder.
+- Ensure every generated class gets a unique `typeId` and you are notified of the assignment.
 
 ### 1. Installation
 

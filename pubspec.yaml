@@ -1,6 +1,6 @@
 name: odata_model_generator
 description: A Dart package to generate models from OData metadata files.
-version: 1.0.0
+version: 1.1.0
 homepage: https://github.com/shubhamkarnalkar/odata_model_generator
 
 environment:

@@ -1,17 +1,34 @@
 import 'package:odata_model_generator/src/models/edm_enum.dart';
 import 'package:path/path.dart' as p;
-import 'package:recase/recase.dart'; // Consider adding this for name formatting
+import 'package:recase/recase.dart';
 import '../models/edm_schema.dart';
 import '../models/edm_property.dart';
 import 'type_mapper.dart';
 import 'dart:io';
 
+/// Generates Dart model classes from OData metadata.
+///
+/// - Supports `json_serializable` for JSON (de)serialization.
+/// - Optionally adds Hive annotations if the class is present in `hive.csv`.
+/// - If a class is present in `hive.csv` but missing a typeId, assigns the next available typeId and prints a warning.
 class ModelGenerator {
+  /// Output directory for generated Dart files.
   final String outputDirectory;
+
+  /// If true, enables Hive annotation logic (requires `hive.csv`).
   final bool useHive;
 
+  /// Creates a [ModelGenerator].
+  ///
+  /// [outputDirectory]: Where generated Dart files will be written.
+  /// [useHive]: If true, enables Hive annotation logic (requires `hive.csv`).
   ModelGenerator(this.outputDirectory, {this.useHive = false});
 
+  /// Generates Dart model classes and enums for the given [schema].
+  ///
+  /// - Reads `hive.csv` (if [useHive] is true) to determine which classes get Hive annotations.
+  /// - If a class is present in `hive.csv` but missing a typeId, assigns the next available typeId and prints a warning.
+  /// - If a class is not present in `hive.csv`, no Hive annotation is added.
   Future<void> generate(EdmSchema schema) async {
     final schemaName = schema.namespace.split('.').last.snakeCase;
     final schemaOutputDirectory = p.join(outputDirectory, schemaName);
@@ -33,6 +50,44 @@ class ModelGenerator {
               parts[1].trim().isNotEmpty) {
             hiveTypeIdMap[parts[0].trim()] = parts[1].trim();
           }
+        }
+      }
+
+      // Scan all Dart files in lib/models for existing typeIds
+      final typeIdRegExp = RegExp(r'@HiveType\(typeId: (\d+)\)');
+      final modelsDir = Directory('lib/models');
+      int maxTypeId = -1;
+      if (modelsDir.existsSync()) {
+        for (final file in modelsDir.listSync(recursive: true)) {
+          if (file is File && file.path.endsWith('.dart')) {
+            final content = await file.readAsString();
+            for (final match in typeIdRegExp.allMatches(content)) {
+              final id = int.tryParse(match.group(1) ?? '');
+              if (id != null && id > maxTypeId) maxTypeId = id;
+            }
+          }
+        }
+      }
+      // For any class missing a typeId, assign next available and warn
+      // Only assign typeId if the className is present in the CSV (even if typeId is missing)
+      for (final entityType in schema.entityTypes) {
+        if (hiveTypeIdMap.containsKey(entityType.name) &&
+            hiveTypeIdMap[entityType.name]!.isEmpty) {
+          final nextId = maxTypeId + 1;
+          print(
+              'WARNING: No Hive typeId for ${entityType.name}. Assigning typeId: $nextId');
+          hiveTypeIdMap[entityType.name] = nextId.toString();
+          maxTypeId = nextId;
+        }
+      }
+      for (final complexType in schema.complexTypes) {
+        if (hiveTypeIdMap.containsKey(complexType.name) &&
+            hiveTypeIdMap[complexType.name]!.isEmpty) {
+          final nextId = maxTypeId + 1;
+          print(
+              'WARNING: No Hive typeId for ${complexType.name}. Assigning typeId: $nextId');
+          hiveTypeIdMap[complexType.name] = nextId.toString();
+          maxTypeId = nextId;
         }
       }
     }
@@ -82,6 +137,7 @@ class ModelGenerator {
     print('Generated library: $libraryFilePath');
   }
 
+  /// Generates Dart enum classes for the given [enums] in [directory].
   Future<void> _generateEnum(
       {required String directory, required List<EdmEnum> enums}) async {
     final filePath = p.join(directory, 'enum.dart');
@@ -113,6 +169,10 @@ class ModelGenerator {
     print('Generated enum classes in : $filePath');
   }
 
+  /// Generates a Dart class for [className] with [properties] and [navigationProperties].
+  ///
+  /// - Adds Hive annotation if [hiveTypeId] is non-null and non-empty.
+  /// - Adds `json_serializable` annotation for all classes.
   Future<void> _generateClass(
       String directory,
       String className,

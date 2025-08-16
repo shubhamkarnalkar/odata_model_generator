@@ -5,7 +5,11 @@ import '../models/edm_entity_type.dart';
 import '../models/edm_complex_type.dart';
 import '../models/edm_property.dart';
 
+/// Parses OData CSDL XML metadata into Dart model schema objects.
+///
+/// Converts XML into [EdmSchema], [EdmEntityType], [EdmComplexType], and [EdmEnum] objects.
 class EdmSchemaParser {
+  /// Parses the given OData XML metadata string and returns an [EdmSchema].
   EdmSchema parseMetadata(String xmlContent) {
     final document = XmlDocument.parse(xmlContent);
     final schemaElement = document.findAllElements('Schema').first;

@@ -1,3 +1,6 @@
+/// Represents a property of an OData entity or complex type.
+///
+/// Includes type, nullability, navigation info, and other OData attributes.
 class EdmProperty {
   final String name;
   final String type; // Edm.String, Edm.Int32, Namespace.ComplexType etc.

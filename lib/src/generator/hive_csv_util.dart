@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:path/path.dart' as p;
 
-/// Utility to scan a directory for Dart model files, extract class names and typeId values, and write to a CSV file.
+/// Utility for generating a `hive.csv` file from Dart model files or OData XML metadata.
+///
+/// The CSV lists class names and their Hive typeId values for use in model generation.
 Future<void> generateHiveCsv(String inputDirectory, String outputDirectory,
     {String? csvPath}) async {
   final outDir = Directory(outputDirectory);
