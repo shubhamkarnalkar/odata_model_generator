@@ -20,15 +20,17 @@ class ModelGenerator {
 
   /// If true, enables Hive annotation logic (requires `hive.csv`).
   final bool useHive;
+  final bool isar;
 
   final List<String> hiveAdapterClasses = [];
+  final List<String> isarClasses = [];
 
   /// Creates a [ModelGenerator].
   ///
   /// [outputDirectory]: Where generated Dart files will be written.
   /// [useHive]: If true, enables Hive annotation logic (requires `hive.csv`).
   ModelGenerator(this.outputDirectory, this.inputDirectory,
-      {this.useHive = false});
+      {this.useHive = false, this.isar = false});
 
   /// Generates Dart model classes and enums for the given [schema].
   ///
@@ -194,6 +196,9 @@ class ModelGenerator {
     if (hiveTypeId != null) {
       buffer.writeln("import 'package:hive/hive.dart';");
     }
+    if (isar) {
+      buffer.writeln("import 'package:isar/isar.dart';");
+    }
     // imports for different entity models which are related
 
     // Regular properties imports
@@ -235,13 +240,16 @@ class ModelGenerator {
         "part '${rcClassName.snakeCase}.g.dart';"); // For json_serializable
     buffer.writeln();
 
+    if (isar) {
+      buffer.writeln('@Collection()');
+      isarClasses.add('${rcClassName.pascalCase.toString()}Schema');
+    }
     if (hiveTypeId != null) {
       buffer.writeln('@HiveType(typeId: $hiveTypeId)');
     }
     buffer.writeln('@JsonSerializable()');
     if (hiveTypeId != null) {
       buffer.writeln('class ${rcClassName.pascalCase} extends HiveObject {');
-
       hiveAdapterClasses.add(
           'Hive.registerAdapter(${rcClassName.pascalCase.toString()}Adapter());');
     } else {
@@ -275,6 +283,7 @@ class ModelGenerator {
         typeName = navType.substring(11, navType.length - 1);
         isCollection = true;
       }
+
       final navTypeClass = ReCase(typeName.split('.').last).pascalCase;
       final dartType = isCollection ? 'List<$navTypeClass>' : navTypeClass;
       buffer.writeln('    $dartType? ${navProp.name.camelCase},');
@@ -293,16 +302,38 @@ class ModelGenerator {
     buffer.writeln('  }');
     buffer.writeln();
 
+    if (isar) {
+      buffer.writeln('  Id id = Isar.autoIncrement; ');
+      buffer.writeln('');
+    }
+
     // Properties
+    final keyProps = properties.where((p) => p.isKey).toList();
     for (final prop in properties) {
       final dartType = TypeMapper.mapODataTypeToDart(prop.type);
-      buffer.writeln('  @JsonKey(name: "${prop.name}")');
-      if (prop.type.contains('Collection') && !dartType.contains('List')) {
-        buffer.writeln('  final $dartType? ${prop.name.camelCase};');
-      } else {
-        buffer.writeln('  final $dartType? ${prop.name.camelCase};');
+      if (isar && prop.isKey) {
+        if (keyProps.length == 1) {
+          buffer.writeln('  @Index(unique: true)');
+        }
       }
+      if (isar && !prop.type.contains('Edm')) {
+        // if isar is true then navigation property should not be included in the class definition
+        buffer.writeln('  @ignore');
+      }
+
+      buffer.writeln('  @JsonKey(name: "${prop.name}")');
+      buffer.writeln('  final $dartType? ${prop.name.camelCase};');
       buffer.writeln();
+    }
+    // Composite index for multiple keys
+    if (isar && keyProps.length > 1) {
+      final compositeFields = keyProps
+          .map((k) => 'CompositeIndex("${k.name.camelCase}")')
+          .join(', ');
+      buffer.writeln('  @Index(composite: [$compositeFields], unique: true)');
+      // Add a dummy field to attach the composite index annotation, initialized to null
+      buffer.writeln(
+          '  final int? isarCompositeKey = null; // Dummy field for composite index, initialized to null');
     }
     // Navigation Properties
     for (final navProp in navigationProperties) {
@@ -316,6 +347,10 @@ class ModelGenerator {
       final navTypeClass = ReCase(typeName.split('.').last).pascalCase;
       final dartType = isCollection ? 'List<$navTypeClass>' : navTypeClass;
       buffer.writeln('  // Navigation property');
+      if (isar) {
+        // if isar is true then navigation property should not be included in the class definition
+        buffer.writeln('  @ignore');
+      }
       buffer.writeln('  final $dartType? ${navProp.name.camelCase};');
       buffer.writeln();
     }

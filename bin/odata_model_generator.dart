@@ -22,6 +22,10 @@ void main(List<String> arguments) async {
     ..addFlag('generate',
         abbr: 'g',
         help: 'Generate Dart model classes from metadata.',
+        defaultsTo: false)
+    ..addFlag('isar',
+        abbr: 's',
+        help: 'Isar related annotations are added to the generated models.',
         defaultsTo: false);
 
   ArgResults argResults = parser.parse(arguments);
@@ -30,6 +34,7 @@ void main(List<String> arguments) async {
   final outputPath = argResults['output'] as String;
   final summaryCsv = argResults['csv'] as bool;
   final generateClasses = argResults['generate'] as bool;
+  final isarAnnotations = argResults['isar'] as bool;
 
   // Require exactly one of -c or -g
   if ((summaryCsv && generateClasses) || (!summaryCsv && !generateClasses)) {
@@ -68,10 +73,10 @@ void main(List<String> arguments) async {
     bool useHive = false;
     useHive = hiveCsvFile.existsSync();
     final generator = ODataModelGenerator(
-      metadataFolderPath: inputPath,
-      outputFolderPath: outputPath,
-      hive: useHive,
-    );
+        metadataFolderPath: inputPath,
+        outputFolderPath: outputPath,
+        hive: useHive,
+        isar: isarAnnotations);
     try {
       await generator.generateModels();
     } catch (e) {

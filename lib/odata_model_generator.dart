@@ -7,11 +7,13 @@ class ODataModelGenerator {
   final String metadataFolderPath;
   final String outputFolderPath;
   final bool hive;
+  final bool isar;
 
   ODataModelGenerator({
     required this.metadataFolderPath,
     required this.outputFolderPath,
     this.hive = false,
+    this.isar = false,
   });
 
   Future<void> generateModels() async {
@@ -31,8 +33,8 @@ class ODataModelGenerator {
     }
 
     final parser = EdmSchemaParser();
-    final generator =
-        ModelGenerator(outputFolderPath, metadataFolderPath, useHive: hive);
+    final generator = ModelGenerator(outputFolderPath, metadataFolderPath,
+        useHive: hive, isar: isar);
 
     for (final file in metadataFiles) {
       print('Processing metadata file: ${file.path}');
@@ -51,6 +53,13 @@ class ODataModelGenerator {
     if (generator.hiveAdapterClasses.isNotEmpty) {
       print('\nIMPORTANT!! Don\'t forget to register Hive adapters:');
       for (final className in generator.hiveAdapterClasses) {
+        print('$className');
+      }
+    }
+
+    if (generator.isarClasses.isNotEmpty) {
+      print('\nIMPORTANT!! Don\'t forget to add schemas for Isar:');
+      for (final className in generator.isarClasses) {
         print('$className');
       }
     }

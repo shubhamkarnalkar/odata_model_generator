@@ -21,9 +21,28 @@ class EdmSchemaParser {
         in schemaElement.findAllElements('EntityType')) {
       final name = entityTypeElement.getAttribute('Name')!;
       final properties = <EdmProperty>[];
+      // Find key property names
+      final keyNames = <String>{};
+      final keyElement = entityTypeElement.findElements('Key').firstOrNull;
+      if (keyElement != null) {
+        for (final propRef in keyElement.findElements('PropertyRef')) {
+          final keyName = propRef.getAttribute('Name');
+          if (keyName != null) keyNames.add(keyName);
+        }
+      }
       for (final propertyElement
           in entityTypeElement.findAllElements('Property')) {
-        properties.add(_parseProperty(propertyElement));
+        final prop = _parseProperty(propertyElement);
+        final isKey = keyNames.contains(prop.name);
+        properties.add(EdmProperty(
+          name: prop.name,
+          type: prop.type,
+          nullable: prop.nullable,
+          maxLength: prop.maxLength,
+          isNavigation: prop.isNavigation,
+          navigationType: prop.navigationType,
+          isKey: isKey,
+        ));
       }
       final navigationProperties = <EdmProperty>[];
       for (final navPropElement

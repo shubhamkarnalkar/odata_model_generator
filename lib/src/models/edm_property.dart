@@ -8,6 +8,7 @@ class EdmProperty {
   final int? maxLength;
   final bool isNavigation;
   final String? navigationType; // Target entity type for navigation properties
+  final bool isKey;
   // Add other OData property attributes as needed
 
   EdmProperty({
@@ -17,5 +18,6 @@ class EdmProperty {
     this.maxLength,
     this.isNavigation = false,
     this.navigationType,
+    this.isKey = false,
   });
 }
